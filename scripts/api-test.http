@@ -1,0 +1,182 @@
+### FlashMall 接口自测（IntelliJ IDEA HTTP Client）
+### 用法：IDEA 打开本文件，点击每个请求左侧的绿色箭头即可执行
+### 变量在「登录」接口的响应里自动带上，无需手工复制
+
+@host = http://localhost:8080
+
+### 0. 环境自检：先跑这个，确认 MySQL / Redis 都通
+GET {{host}}/api/health
+
+### 1. 发送验证码（演示项目直接把 code 返回在响应里）
+# @name sendCode
+POST {{host}}/api/auth/send-code?phone=13800000001
+
+### 2. 登录（把上一步返回的验证码填到 code 里）
+# @name login
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "phone": "13800000001",
+  "code": "123456"
+}
+
+> {%
+    client.global.set("token", response.body.data.token);
+    client.log("token = " + response.body.data.token);
+%}
+
+### 3. 分类列表（游客可访问）
+GET {{host}}/api/goods/categories
+
+### 4. 商品分页（游客可访问）
+GET {{host}}/api/goods/page?categoryId=2&page=1&size=10
+
+### 5. 商品详情 —— 走三级缓存，连续点几次观察日志里没有 SQL 输出
+GET {{host}}/api/goods/3
+
+### 6. 加入购物车
+POST {{host}}/api/cart/add
+Authorization: {{token}}
+Content-Type: application/json
+
+{
+  "skuId": 4,
+  "quantity": 2
+}
+
+### 7. 查看购物车
+GET {{host}}/api/cart
+Authorization: {{token}}
+
+### 8. 提交订单（拿到 orderNo 后填到下面的变量里）
+# @name submitOrder
+POST {{host}}/api/order/submit
+Authorization: {{token}}
+Content-Type: application/json
+
+{
+  "receiverName": "张三",
+  "receiverPhone": "13800000001",
+  "receiverAddr": "浙江省杭州市西湖区文三路 100 号",
+  "remark": "尽快发货"
+}
+
+> {%
+    client.global.set("orderNo", response.body.data.orderNo);
+    client.log("orderNo = " + response.body.data.orderNo);
+%}
+
+### 9. 模拟发起支付
+POST {{host}}/api/order/{{orderNo}}/pay
+Authorization: {{token}}
+
+### 10. 模拟微信支付回调（重复执行多次，应该只生效一次 —— 验证幂等）
+POST {{host}}/api/pay/notify
+Content-Type: application/json
+
+{
+  "orderNo": "{{orderNo}}",
+  "tradeNo": "wx_mock_trade_001"
+}
+
+### 11. 查看订单详情（状态应变成「待接单」）
+GET {{host}}/api/order/{{orderNo}}
+Authorization: {{token}}
+
+### ================= 秒杀链路 =================
+
+### 12. 抢购（种子活动 id=1，sku=3，秒杀库存 100，每人限购 1）
+# @name seckill
+POST {{host}}/api/seckill/1/3
+Authorization: {{token}}
+
+> {%
+    client.global.set("seckillOrderNo", response.body.data.orderNo);
+    client.log("seckillOrderNo = " + response.body.data.orderNo);
+%}
+
+### 13. 轮询抢购结果：PROCESSING → SUCCESS
+GET {{host}}/api/seckill/result/{{seckillOrderNo}}
+Authorization: {{token}}
+
+### 14. 再抢一次同一个商品 —— 应返回「超出限购数量」
+POST {{host}}/api/seckill/1/3
+Authorization: {{token}}
+
+### ================= B 端后台 =================
+
+### 15. 后台登录（admin / 123456）
+# @name adminLogin
+POST {{host}}/api/admin/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "123456"
+}
+
+> {%
+    client.global.set("adminToken", response.body.data.token);
+%}
+
+### 16. 运营看板
+GET {{host}}/api/admin/dashboard
+Authorization: {{adminToken}}
+
+### 17. 后台商品分页（能看到下架商品）
+GET {{host}}/api/admin/goods/page?page=1&size=10
+Authorization: {{adminToken}}
+
+### 18. 修改商品（改价后商品详情缓存会被清掉，再查详情能看到新价格）
+PUT {{host}}/api/admin/goods
+Authorization: {{adminToken}}
+Content-Type: application/json
+
+{
+  "id": 2,
+  "name": "轻羽绒保暖外套（新款）",
+  "price": 259.00
+}
+
+### 19. 商品上下架（0 下架 / 1 上架）
+PUT {{host}}/api/admin/goods/2/status?status=0
+Authorization: {{adminToken}}
+
+### 20. 发布新的秒杀活动（会自动预热到 Redis）
+POST {{host}}/api/admin/seckill/publish
+Authorization: {{adminToken}}
+Content-Type: application/json
+
+{
+  "title": "周末闪购专场",
+  "startTime": "2026-01-01 00:00:00",
+  "endTime": "2030-01-01 00:00:00",
+  "items": [
+    { "skuId": 5, "seckillPrice": 9.90, "seckillStock": 50, "limitPerUser": 2 }
+  ]
+}
+
+### 21. 活动详情（同时返回 DB 库存与 Redis 剩余库存，方便对账）
+GET {{host}}/api/admin/seckill/1
+Authorization: {{adminToken}}
+
+### 22. 取一个还有库存的秒杀商品（压测脚本用来拿参数）
+GET {{host}}/api/admin/seckill/current
+Authorization: {{adminToken}}
+
+### 23. 商家接单（待接单 → 已接单）
+PUT {{host}}/api/admin/order/{{orderNo}}/confirm
+Authorization: {{adminToken}}
+
+### 24. 派送（已接单 → 派送中）
+PUT {{host}}/api/admin/order/{{orderNo}}/deliver
+Authorization: {{adminToken}}
+
+### 25. 完成（派送中 → 已完成）
+PUT {{host}}/api/admin/order/{{orderNo}}/complete
+Authorization: {{adminToken}}
+
+### 26. 后台订单分页
+GET {{host}}/api/admin/order/page?page=1&size=10
+Authorization: {{adminToken}}

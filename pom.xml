@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.2.5</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>com.flashmall</groupId>
+    <artifactId>flash-mall</artifactId>
+    <version>1.0.0</version>
+    <packaging>pom</packaging>
+    <name>flash-mall</name>
+    <description>FlashMall 闪购商城 - 高并发电商秒杀平台</description>
+
+    <modules>
+        <module>mall-common</module>
+        <module>mall-pojo</module>
+        <module>mall-server</module>
+    </modules>
+
+    <properties>
+        <java.version>17</java.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <mybatis-plus.version>3.5.7</mybatis-plus.version>
+        <redisson.version>3.27.2</redisson.version>
+    </properties>
+
+    <!--
+        所有依赖版本统一在这里管理，子模块只写 groupId + artifactId，不再出现 version。
+        由 spring-boot-starter-parent 的 BOM 已管理的（spring-boot-starter-*、lombok、
+        mysql-connector-j、caffeine、commons-pool2）不需要再写版本。
+    -->
+    <dependencyManagement>
+        <dependencies>
+
+            <!-- ===== 内部模块 ===== -->
+            <dependency>
+                <groupId>com.flashmall</groupId>
+                <artifactId>mall-common</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.flashmall</groupId>
+                <artifactId>mall-pojo</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!-- ===== MyBatis-Plus ===== -->
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+                <version>${mybatis-plus.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-annotation</artifactId>
+                <version>${mybatis-plus.version}</version>
+            </dependency>
+
+            <!-- ===== Redisson 分布式锁 ===== -->
+            <dependency>
+                <groupId>org.redisson</groupId>
+                <artifactId>redisson</artifactId>
+                <version>${redisson.version}</version>
+            </dependency>
+
+        </dependencies>
+    </dependencyManagement>
+</project>

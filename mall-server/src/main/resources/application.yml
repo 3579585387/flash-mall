@@ -1,0 +1,73 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: flash-mall
+
+  # ---------------- MySQL ----------------
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    # createDatabaseIfNotExist=true：库不存在时自动创建，首次运行无需手工建库
+    url: jdbc:mysql://127.0.0.1:3306/flash_mall?createDatabaseIfNotExist=true&useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false&rewriteBatchedStatements=true
+    username: root
+    password: ${REDIS_PASSWORD:}
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 3000
+
+  # ---------------- 建表 & 初始化数据（可重复执行） ----------------
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:db/schema.sql
+      data-locations: classpath:db/data.sql
+      encoding: UTF-8
+      continue-on-error: false
+
+  # ---------------- Redis ----------------
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+      database: 0
+      password:                 # 有密码就填
+      timeout: 3000ms
+      lettuce:
+        pool:
+          max-active: 16
+          max-idle: 16
+          min-idle: 2
+          max-wait: 1000ms
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    # 本地调试想看 SQL 就打开，压测/上线注释掉
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    banner: false
+    db-config:
+      id-type: auto
+
+# ---------------- 项目自定义配置 ----------------
+flash-mall:
+  order:
+    # 未支付自动关单时长（分钟）
+    pay-timeout-minutes: 15
+  seckill:
+    # 消费线程数
+    consumer-threads: 2
+    # 单条消息最大重试次数，超过则进死信并回补库存
+    max-retry: 3
+  redisson:
+    # 当前业务代码未直接使用 Redisson；设为 true 才会创建 RedissonClient
+    enabled: false
+    address: redis://127.0.0.1:6379
+    password:
+
+logging:
+  level:
+    root: info
+    com.flashmall: debug
