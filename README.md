@@ -33,9 +33,7 @@
 | MySQL | 5.7 / 8.x / 9.x | **库会自动创建**，只需账号有建库权限 |
 | Redis | **5.0+**（推荐 6/7） | 用到 Stream，必须 5.0 以上 |
 
-> Windows 上没装 Redis？下载 [Redis for Windows](https://github.com/tporadowski/redis/releases)
-> 解压后双击 `redis-server.exe` 即可，默认就是 `127.0.0.1:6379`。
-> 或者用 Docker：`docker run -d -p 6379:6379 --name flashmall-redis redis:7-alpine`
+
 
 ### 2. 改一处配置
 
